@@ -1,52 +1,38 @@
 #!/usr/bin/python3
-'''reads stdin line by line and computes metrics'''
-import re
-import sys
-import signal
+"""stats module
+"""
+from sys import stdin
 
 
-toMatch = re.compile(
-                     r'^\d{1,3}\.\d{1,3}\.\d{1,3} \
-                     \.\d{1,3}\s\-\s\[[0-9]{4}\-[0-9] \
-                     {1,2}\-[0-9]{1,2}\s[0-9]{1,2}\: \
-                     [0-9]{1,2}\:[0-9]{1,2}.[0-9]{1,6}\] \
-                     \s\"GET\s\/projects\/260\sHTTP\/ \
-                     1\.1\"\s\d{3}\s\d{1,4}$')
-statusCodeTracker = {
-    '200': 0,
-    '301': 0,
-    '400': 0,
-    '401': 0,
-    '403': 0,
-    '404': 0,
-    '405': 0,
-    '500': 0
-}
-fileSizeTracker = 0
-lineCount = 0
+codes = {'200': 0, '301': 0, '400': 0, '401': 0,
+         '403': 0, '404': 0, '405': 0, '500': 0}
+size = 0
 
 
-def handler():
-    return True
+def print_info():
+    """print_info method print needed info
+    Args:
+        codes (dict): code status
+        size (int): size of files
+    """
+    print("File size: {}".format(size))
+    for key, val in sorted(codes.items()):
+        if val > 0:
+            print("{}: {}".format(key, val))
 
-
-for line in sys.stdin:
-    lineCount += 1
-    if toMatch.match(line) is False:
-        continue
-    withoutDash = line.replace('-', '')
-    arrayFromString = withoutDash.split(' ')
+if __name__ == '__main__':
     try:
-        statusCode = int(arrayFromString[6])
-        if arrayFromString[5] and isinstance(int(arrayFromString[6]), int):
-            statusCodeTracker[arrayFromString[6]] += 1
-        fileSizeTracker += int(arrayFromString[7])
-        if lineCount == 10 or signal.signal(signal.SIGINT, handler):
-            print('File size: {}'.format(fileSizeTracker))
-            for key, value in statusCodeTracker.items():
-                if statusCode not in statusCodeTracker.keys():
-                    continue
-                print('{}: {}'.format(key, value))
-            lineCount = 0
-    except:
-        pass
+        for i, line in enumerate(stdin, 1):
+            try:
+                info = line.split()
+                size += int(info[-1])
+                if info[-2] in codes.keys():
+                    codes[info[-2]] += 1
+            except Exception:
+                pass
+            if not i % 10:
+                print_info()
+    except KeyboardInterrupt:
+        print_info()
+        raise
+    print_info()
